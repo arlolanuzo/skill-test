@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const noticeController = require("./notices-controller");
 const { checkApiAccess } = require("../../middlewares");
+const { CreateNoticeSchema } = require("./notices-schema");
+const { validateRequest } = require("../../utils");
 
 router.get(
   "/recipients/list",
@@ -45,7 +47,12 @@ router.get(
   noticeController.handleFetchNoticeDetailById
 );
 router.get("", checkApiAccess, noticeController.handleFetchAllNotices);
-router.post("", checkApiAccess, noticeController.handleAddNotice);
+router.post(
+  "",
+  checkApiAccess,
+  validateRequest(CreateNoticeSchema),
+  noticeController.handleAddNotice
+);
 router.put("/:id", checkApiAccess, noticeController.handleUpdateNotice);
 
 module.exports = { noticesRoutes: router };
