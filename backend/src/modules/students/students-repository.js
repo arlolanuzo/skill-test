@@ -5,21 +5,52 @@ const getRoleId = async (roleName) => {
     const queryParams = [roleName];
     const { rows } = await processDBRequest({ query, queryParams });
     return rows[0].id;
-}
+};
 
 const findAllStudents = async (payload) => {
-    const { name, className, section, roll } = payload;
+    const {
+        name,
+        className,
+        sectionName,
+        roll,
+        search,
+        page = 1,
+        limit = 10,
+    } = payload;
     let query = `
         SELECT
             t1.id,
             t1.name,
             t1.email,
             t1.last_login AS "lastLogin",
-            t1.is_active AS "systemAccess"
+            t1.is_active AS "systemAccess",
+            t3.user_id AS "userId",
+            t3.gender,
+            t3.dob,
+            t3.phone,
+            t3.class_name AS "className",
+            t3.section_name AS "sectionName",
+            t3.roll,
+            t3.admission_dt AS "admissionDate",
+            t3.father_name AS "fatherName",
+            t3.father_phone AS "fatherPhone",
+            t3.mother_name AS "motherName",
+            t3.mother_phone AS "motherPhone",
+            t3.guardian_name AS "guardianName",
+            t3.guardian_phone AS "guardianPhone",
+            t3.relation_of_guardian AS "relationOfGuardian",
+            t3.current_address AS "currentAddress",
+            t3.permanent_address AS "permanentAddress",
+            t3.created_dt AS "createdDt",
+            t3.updated_dt AS "updatedDt"
         FROM users t1
         LEFT JOIN user_profiles t3 ON t1.id = t3.user_id
         WHERE t1.role_id = 3`;
     let queryParams = [];
+    if (search) {
+        query += ` AND (t1.name ILIKE $${queryParams.length + 1} OR t1.email ILIKE $${queryParams.length + 2})`;
+        queryParams.push(`%${search}%`, `%${search}%`);
+    }
     if (name) {
         query += ` AND t1.name = $${queryParams.length + 1}`;
         queryParams.push(name);
@@ -28,27 +59,35 @@ const findAllStudents = async (payload) => {
         query += ` AND t3.class_name = $${queryParams.length + 1}`;
         queryParams.push(className);
     }
-    if (section) {
+    if (sectionName) {
         query += ` AND t3.section_name = $${queryParams.length + 1}`;
-        queryParams.push(section);
+        queryParams.push(sectionName);
     }
     if (roll) {
         query += ` AND t3.roll = $${queryParams.length + 1}`;
         queryParams.push(roll);
     }
 
-    query += ' ORDER BY t1.id';
+    query += " ORDER BY t1.id";
+
+    const offset = (page - 1) * limit;
+    query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+    queryParams.push(limit, offset);
 
     const { rows } = await processDBRequest({ query, queryParams });
     return rows;
-}
+};
 
 const addOrUpdateStudent = async (payload) => {
-    const query = "SELECT * FROM student_add_update($1)";
-    const queryParams = [payload];
-    const { rows } = await processDBRequest({ query, queryParams });
-    return rows[0];
-}
+    try {
+        const query = "SELECT * FROM student_add_update($1)";
+        const queryParams = [payload];
+        const { rows } = await processDBRequest({ query, queryParams });
+        return rows[0];
+    } catch (error) {
+        throw error;
+    }
+};
 
 const findStudentDetail = async (id) => {
     const query = `
@@ -81,7 +120,7 @@ const findStudentDetail = async (id) => {
     const queryParams = [id];
     const { rows } = await processDBRequest({ query, queryParams });
     return rows[0];
-}
+};
 
 const findStudentToSetStatus = async ({ userId, reviewerId, status }) => {
     const now = new Date();
@@ -95,11 +134,14 @@ const findStudentToSetStatus = async ({ userId, reviewerId, status }) => {
     `;
     const queryParams = [status, now, reviewerId, userId];
     const { rowCount } = await processDBRequest({ query, queryParams });
-    return rowCount
-}
+    return rowCount;
+};
 
-const findStudentToUpdate = async (paylaod) => {
-    const { basicDetails: { name, email }, id } = paylaod;
+const findStudentToUpdate = async (payload) => {
+    const {
+        basicDetails: { name, email },
+        id,
+    } = payload;
     const currentDate = new Date();
     const query = `
         UPDATE users
@@ -109,7 +151,7 @@ const findStudentToUpdate = async (paylaod) => {
     const queryParams = [name, email, currentDate, id];
     const { rows } = await processDBRequest({ query, queryParams });
     return rows;
-}
+};
 
 module.exports = {
     getRoleId,
@@ -117,5 +159,5 @@ module.exports = {
     addOrUpdateStudent,
     findStudentDetail,
     findStudentToSetStatus,
-    findStudentToUpdate
+    findStudentToUpdate,
 };
