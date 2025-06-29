@@ -1,5 +1,6 @@
 const { v4: uuidV4 } = require("uuid");
 const { env, db } = require("../../config");
+const { ERROR_MESSAGES } = require("../../constants");
 
 const {
   ApiError,
@@ -17,7 +18,10 @@ const {
 const { insertRefreshToken, findUserById } = require("../../shared/repository");
 
 const processPasswordChange = async (payload) => {
-  const client = await db.connect();
+  const client = await db.connect().catch(() => {
+      throw new ApiError(500, ERROR_MESSAGES.DATABASE_ERROR);
+  });
+
   try {
     const { userId, oldPassword, newPassword } = payload;
     await client.query("BEGIN");

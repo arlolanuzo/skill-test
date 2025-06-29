@@ -1,4 +1,5 @@
 const { db } = require("../../config");
+const { ERROR_MESSAGES } = require("../../constants");
 const { ApiError, isObjectEmpty } = require("../../utils");
 const {
   insertRole,
@@ -83,7 +84,9 @@ const processRoleStatus = async (id, status) => {
 const addRolePermission = async (roleId, permissionIds) => {
   await checkIfRoleIdExist(roleId);
 
-  const client = await db.connect();
+  const client = await db.connect().catch(() => {
+      throw new ApiError(500, ERROR_MESSAGES.DATABASE_ERROR);
+  });
   try {
     await client.query("BEGIN");
 

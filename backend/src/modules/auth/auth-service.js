@@ -1,3 +1,4 @@
+const { ERROR_MESSAGES } = require("../../constants");
 const {
   ApiError,
   generateToken,
@@ -33,8 +34,12 @@ const EMAIL_NOT_VERIFIED =
   "Email not verified yet. Please verify your email first.";
 const USER_ALREADY_ACTIVE = "User already in active status. Please login.";
 const UNABLE_TO_VERIFY_EMAIL = "Unable to verify email";
+
 const login = async (username, passwordFromUser) => {
-  const client = await db.connect();
+  const client = await db.connect().catch(() => {
+    throw new ApiError(500, ERROR_MESSAGES.DATABASE_ERROR);
+  });
+
   try {
     await client.query("BEGIN");
 
