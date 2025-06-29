@@ -14,13 +14,13 @@ const invalidateRefreshToken = async (token) => {
     return rowCount;
 }
 
-const findUserByRefreshToken = async (refreshToken) => {
+const findUserByRefreshToken = async (refreshToken, client = db) => {
     const query = `
         SELECT u.* 
         FROM users u
         JOIN user_refresh_tokens rt ON u.id = rt.user_id
         WHERE rt.token = $1`;
-    const { rows } = await db.query(query, [refreshToken]);
+    const { rows } = await client.query(query, [refreshToken]);
     return rows[0];
 };
 
@@ -54,7 +54,7 @@ const getMenusByRoleId = async (roleId, client) => {
     return rows;
 }
 
-const getRoleNameByRoleId = async (id, client) => {
+const getRoleNameByRoleId = async (id, client = db) => {
     const query = "SELECT lower(name) AS name from roles WHERE id = $1";
     const queryParams = [id];
     const { rows } = await client.query(query, queryParams);

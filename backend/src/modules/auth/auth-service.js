@@ -113,10 +113,7 @@ const logout = async (refreshToken) => {
 };
 
 const getNewAccessAndCsrfToken = async (refreshToken) => {
-  const client = await db.connect();
   try {
-    await client.query("BEGIN");
-
     const decodedToken = verifyToken(
       refreshToken,
       env.JWT_REFRESH_TOKEN_SECRET
@@ -135,7 +132,7 @@ const getNewAccessAndCsrfToken = async (refreshToken) => {
       throw new ApiError(401, "Your account is disabled");
     }
 
-    const roleName = await getRoleNameByRoleId(role_id, client);
+    const roleName = await getRoleNameByRoleId(role_id);
     const csrfToken = uuidV4();
     const csrfHmacHash = generateCsrfHmacHash(csrfToken);
     const accessToken = generateToken(
@@ -144,18 +141,14 @@ const getNewAccessAndCsrfToken = async (refreshToken) => {
       env.JWT_ACCESS_TOKEN_TIME_IN_MS
     );
 
-    await client.query("COMMIT");
-
     return {
       accessToken,
       csrfToken,
       message: "Refresh-token and csrf-token generated successfully",
     };
   } catch (error) {
-    await client.query("ROLLBACK");
+    console.log('error', error)
     throw error;
-  } finally {
-    client.release();
   }
 };
 
