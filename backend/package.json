@@ -24,6 +24,7 @@
     "resend": "^4.0.0",
     "sqlite3": "^5.1.7",
     "uuid": "^10.0.0",
+    "xss": "^1.0.15",
     "zod": "^3.23.8"
   },
   "devDependencies": {
