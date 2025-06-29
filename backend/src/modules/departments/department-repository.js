@@ -1,5 +1,6 @@
 const { processDBRequest } = require("../../utils");
 
+// TODO: implement pagination
 const getAllDepartments = async () => {
     const query = "SELECT * FROM departments";
     const { rows } = await processDBRequest({ query });

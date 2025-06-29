@@ -103,6 +103,7 @@ const deleteUserFromPolicyById = async (userId, policyId) => {
     return rowCount;
 }
 
+// TODO: implement pagination
 const getPolicyEligibleUsers = async () => {
     const query = `SELECT * FROM users WHERE is_active = true`;
     const { rows } = await processDBRequest({ query });
