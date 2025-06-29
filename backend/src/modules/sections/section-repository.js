@@ -1,5 +1,6 @@
 const { processDBRequest } = require("../../utils");
 
+// TODO: implement pagination
 const getAllSections = async () => {
     const query = "SELECT * FROM sections";
     const { rows } = await processDBRequest({ query });

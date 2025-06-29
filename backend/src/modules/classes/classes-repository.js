@@ -1,5 +1,6 @@
 const { processDBRequest } = require("../../utils");
 
+// TODO: implement pagination
 const getAllClasses = async () => {
     const query = "SELECT * FROM classes ORDER BY name";
     const { rows } = await processDBRequest({ query });
