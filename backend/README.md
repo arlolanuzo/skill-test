@@ -7,6 +7,7 @@ A robust Node.js REST API built with Express.js and PostgreSQL for managing scho
 ### Prerequisites
 - Node.js (v16 or higher)
 - PostgreSQL (v12 or higher)
+- Redis (v6 or higher)
 - npm or yarn
 
 ### Installation & Setup
@@ -47,6 +48,7 @@ UI_URL=http://localhost:5173
 API_URL=http://localhost:5007
 COOKIE_DOMAIN=localhost
 RESEND_API_KEY=your_resend_api_key
+REDIS_URL=redis://localhost:6379
 ```
 
 ## 🛠️ Technology Stack
@@ -55,6 +57,7 @@ RESEND_API_KEY=your_resend_api_key
 - **Node.js** - JavaScript runtime
 - **Express.js** - Web application framework
 - **PostgreSQL** - Primary database
+- **Redis** - Session Caching
 - **JWT** - Authentication tokens
 - **Argon2** - Password hashing
 
@@ -64,6 +67,7 @@ RESEND_API_KEY=your_resend_api_key
 - **cookie-parser** - Cookie parsing middleware
 - **dotenv** - Environment variable management
 - **pg** - PostgreSQL client
+- **redis** - Redis client
 - **uuid** - UUID generation
 - **zod** - Runtime type validation
 - **resend** - Email service
@@ -73,7 +77,8 @@ RESEND_API_KEY=your_resend_api_key
 ```
 src/
 ├── config/                 # Configuration files
-│   ├── database.js        # Database connection setup
+│   ├── db.js        # Database connection setup
+│   ├── redis.js           # Redis connection setup
 │   └── env.js             # Environment variables
 ├── middlewares/           # Express middlewares
 │   ├── auth.js            # Authentication middleware

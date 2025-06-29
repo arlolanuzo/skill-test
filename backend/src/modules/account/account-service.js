@@ -16,13 +16,13 @@ const {
   getStaffAccountDetail,
 } = require("./account-repository");
 const {
-    insertRefreshToken,
-    findUserById,
-} = require("../../shared/repository");
+  destroyOldCachedRefreshTokenByUserId,
+} = require("../auth/auth-repository");
+const { cacheRefreshToken, findUserById } = require("../../shared/repository");
 
 const processPasswordChange = async (payload) => {
   const client = await db.connect().catch(() => {
-      throw new ApiError(500, ERROR_MESSAGES.DATABASE_ERROR);
+    throw new ApiError(500, ERROR_MESSAGES.DATABASE_ERROR);
   });
 
   try {
@@ -58,9 +58,14 @@ const processPasswordChange = async (payload) => {
       env.JWT_REFRESH_TOKEN_TIME_IN_MS
     );
 
-    await insertRefreshToken({ userId, refreshToken }, client);
-
     await client.query("COMMIT");
+
+    try {
+      await destroyOldCachedRefreshTokenByUserId(userId);
+      await cacheRefreshToken({ userId, refreshToken });
+    } catch (error) {
+      throw new ApiError(500, "Unable to change password, please try again later");
+    }
 
     return {
       refreshToken,
