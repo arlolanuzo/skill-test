@@ -15,7 +15,10 @@ const {
   getStudentAccountDetail,
   getStaffAccountDetail,
 } = require("./account-repository");
-const { insertRefreshToken, findUserById } = require("../../shared/repository");
+const {
+    insertRefreshToken,
+    findUserById,
+} = require("../../shared/repository");
 
 const processPasswordChange = async (payload) => {
   const client = await db.connect().catch(() => {
@@ -31,7 +34,7 @@ const processPasswordChange = async (payload) => {
       throw new ApiError(404, "User does not exist");
     }
 
-    const { password: passwordFromDB } = user;
+    const { password: passwordFromDB, role_id: roleId } = user;
     await verifyPassword(passwordFromDB, oldPassword);
 
     const roleName = await getUserRoleNameByUserId(userId, client);
@@ -45,12 +48,12 @@ const processPasswordChange = async (payload) => {
     const csrfToken = uuidV4();
     const csrfHmacHash = generateCsrfHmacHash(csrfToken);
     const accessToken = generateToken(
-      { id: userId, role: roleName, csrf_hmac: csrfHmacHash },
+      { id: userId, role: roleName, roleId, csrf_hmac: csrfHmacHash },
       env.JWT_ACCESS_TOKEN_SECRET,
       env.JWT_ACCESS_TOKEN_TIME_IN_MS
     );
     const refreshToken = generateToken(
-      { id: userId },
+      { id: userId, role: roleName, roleId },
       env.JWT_REFRESH_TOKEN_SECRET,
       env.JWT_REFRESH_TOKEN_TIME_IN_MS
     );
