@@ -44,6 +44,9 @@ CREATE TABLE users(
     is_email_verified BOOLEAN DEFAULT false
 );
 
+CREATE INDEX idx_users_role_id ON users(role_id); -- frequently used in filters/joins
+CREATE INDEX idx_users_reporter_id ON users(reporter_id);  -- used in joins
+
 CREATE TABLE user_profiles(
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
     gender VARCHAR(10) DEFAULT NULL,
@@ -81,6 +84,12 @@ CREATE TABLE user_profiles(
     updated_dt TIMESTAMP DEFAULT NULL
 );
 
+CREATE INDEX idx_user_profiles_class_name ON user_profiles(class_name); -- for student search queries
+CREATE INDEX idx_user_profiles_section_name ON user_profiles(section_name); -- for student search queries
+CREATE INDEX idx_user_profiles_department_id ON user_profiles(department_id); -- for staff/teacher queries
+CREATE INDEX idx_user_profiles_admission_year ON user_profiles ((EXTRACT(YEAR FROM admission_dt))); -- for dashboard queries
+CREATE INDEX idx_user_profiles_join_year ON user_profiles ((EXTRACT(YEAR FROM join_dt))); -- for dashboard queries
+
 CREATE TABLE access_controls(
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -92,6 +101,8 @@ CREATE TABLE access_controls(
     method VARCHAR(10) DEFAULT NULL,
     UNIQUE(path, method)
 );
+
+CREATE INDEX idx_access_controls_path_method ON access_controls(path, method); -- for checkPermission query
 
 CREATE TABLE leave_status(
     id SERIAL PRIMARY KEY,
@@ -112,6 +123,10 @@ CREATE TABLE user_leaves(
     status INTEGER REFERENCES leave_status(id)
 );
 
+CREATE INDEX idx_user_leaves_user_id ON user_leaves(user_id); -- for user leave lookups
+CREATE INDEX idx_user_leaves_leave_policy_id ON user_leaves(leave_policy_id); -- used in joins
+CREATE INDEX idx_user_leaves_status_from_to ON user_leaves(status, from_dt, to_dt); -- who is out this week/month
+
 CREATE TABLE class_teachers(
     id SERIAL PRIMARY KEY,
     teacher_id INTEGER REFERENCES users(id),
@@ -122,6 +137,8 @@ CREATE TABLE class_teachers(
         ON UPDATE CASCADE
         ON DELETE SET NULL
 );
+
+CREATE INDEX idx_class_teachers_class_name ON class_teachers(class_name ASC); -- sorting teachers by class
 
 CREATE TABLE notice_status(
     id SERIAL PRIMARY KEY,
@@ -144,6 +161,12 @@ CREATE TABLE notices(
     recipient_first_field VARCHAR(20) DEFAULT NULL
 );
 
+CREATE INDEX idx_notices_author_id ON notices(author_id); -- frequently used in joining with users
+CREATE INDEX idx_notices_status ON notices(status); -- for filtering by notice status
+CREATE INDEX idx_notices_recipient_access ON notices(recipient_type, recipient_role_id, recipient_first_field) WHERE status = 5; -- important in get_notices
+CREATE INDEX idx_notices_created_dt_desc ON notices (created_dt DESC); -- for recent notices
+
+
 CREATE TABLE user_refresh_tokens (
   id SERIAL PRIMARY KEY,
   token TEXT NOT NULL,
@@ -152,6 +175,9 @@ CREATE TABLE user_refresh_tokens (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE INDEX idx_user_refresh_tokens_token ON user_refresh_tokens(token); -- for invalidating token
+CREATE INDEX idx_user_refresh_tokens_user_id ON user_refresh_tokens(user_id); -- for joins with user and deleting tokens
+
 CREATE TABLE permissions(
     id SERIAL PRIMARY KEY,
     role_id INTEGER REFERENCES roles(id),
@@ -159,6 +185,8 @@ CREATE TABLE permissions(
     type VARCHAR(20) DEFAULT NULL,
     UNIQUE(role_id, access_control_id)
 );
+
+CREATE UNIQUE INDEX idx_permissions_role_access ON permissions(role_id, access_control_id); -- ensures one permission per role
 
 CREATE TABLE notice_recipient_types(
     id SERIAL PRIMARY KEY,
@@ -173,6 +201,8 @@ CREATE TABLE user_leave_policy (
     leave_policy_id INTEGER REFERENCES leave_policies(id) DEFAULT NULL,
     UNIQUE (user_id, leave_policy_id)
 );
+
+CREATE UNIQUE INDEX idx_user_leave_policy_pair ON user_leave_policy(user_id, leave_policy_id); -- ensures one policy per user, useful in joins too
 
 
 -- functions
