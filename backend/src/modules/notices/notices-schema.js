@@ -1,14 +1,6 @@
 const { z } = require("zod");
 const { POSTGRES_INTEGER_MAX } = require("../../constants");
 
-const idField = z.coerce
-    .number()
-    .int({ message: "ID must be an integer" })
-    .min(1, { message: "ID must be a positive integer" })
-    .max(POSTGRES_INTEGER_MAX, {
-        message: `ID must not exceed value '${POSTGRES_INTEGER_MAX}'`,
-    });
-
 const noticeDetailsSchema = z.object({
     title: z
         .string()

@@ -1,4 +1,5 @@
 const { db } = require("../../config");
+const { redisClient } = require("../../config/redis");
 const { processDBRequest } = require("../../utils");
 
 const findUserByUsername = async (username, client) => {
@@ -7,29 +8,18 @@ const findUserByUsername = async (username, client) => {
     return rows[0];
 };
 
-const invalidateRefreshToken = async (token) => {
-    const query = "DELETE FROM user_refresh_tokens WHERE token = $1";
-    const queryParams = [token];
-    const { rowCount } = await processDBRequest({ query, queryParams });
-    return rowCount;
-}
-
-const findUserByRefreshToken = async (refreshToken, client = db) => {
-    const query = `
-        SELECT u.* 
-        FROM users u
-        JOIN user_refresh_tokens rt ON u.id = rt.user_id
-        WHERE rt.token = $1`;
-    const { rows } = await client.query(query, [refreshToken]);
-    return rows[0];
+const invalidateCachedRefreshToken = async (userId, refreshToken) => {
+    return await redisClient.del(`session:${userId}:${refreshToken}`);
 };
 
-const updateUserRefreshToken = async (newRefreshToken, expiresAt, userId, oldRefreshToken) => {
-    const query = `
-    UPDATE user_refresh_tokens
-    SET token = $1, expires_at = $2
-    WHERE user_id = $3 AND token = $4`;
-    await db.query(query, [newRefreshToken, expiresAt, userId, oldRefreshToken]);
+const findCachedRefreshToken = async (userId, refreshToken) => {
+    const sessionData = await redisClient.get(
+        `session:${userId}:${refreshToken}`
+    );
+    if (sessionData) {
+        return JSON.parse(sessionData);
+    }
+    return null;
 };
 
 const getMenusByRoleId = async (roleId, client) => {
@@ -52,34 +42,32 @@ const getMenusByRoleId = async (roleId, client) => {
     const queryParams = isUserAdmin ? [] : [roleId];
     const { rows } = await client.query(query, queryParams);
     return rows;
-}
+};
 
 const getRoleNameByRoleId = async (id, client = db) => {
     const query = "SELECT lower(name) AS name from roles WHERE id = $1";
     const queryParams = [id];
     const { rows } = await client.query(query, queryParams);
     return rows[0].name;
-}
+};
 
 const saveUserLastLoginDate = async (userId, client) => {
     const now = new Date();
     const query = `UPDATE users SET last_login = $1 WHERE id = $2`;
     const queryParams = [now, userId];
     await client.query(query, queryParams);
-}
+};
 
-const deleteOldRefreshTokenByUserId = async (userId, client) => {
-    const query = `DELETE FROM user_refresh_tokens WHERE user_id = $1`;
-    const queryParams = [userId];
-    await client.query(query, queryParams);
-}
+const destroyOldCachedRefreshTokenByUserId = async (userId) => {
+    return await redisClient.del(`session:${userId}:*`);
+};
 
 const isEmailVerified = async (id) => {
-    const query = 'SELECT is_email_verified FROM users WHERE id = $1';
+    const query = "SELECT is_email_verified FROM users WHERE id = $1";
     const queryParams = [id];
     const { rows } = await processDBRequest({ query, queryParams });
     return rows[0].is_email_verified;
-}
+};
 
 const verifyAccountEmail = async (id) => {
     const query = `
@@ -91,14 +79,14 @@ const verifyAccountEmail = async (id) => {
     const queryParams = [id];
     const { rows } = await processDBRequest({ query, queryParams });
     return rows[0];
-}
+};
 
 const doesEmailExist = async (id, email) => {
     const query = `SELECT email FROM users WHERE email = $1 AND id = $2`;
     const queryParams = [email, id];
     const { rows } = await processDBRequest({ query, queryParams });
-    return rows[0]
-}
+    return rows[0];
+};
 
 const setupUserPassword = async (payload) => {
     const { userId, userEmail, password } = payload;
@@ -110,17 +98,16 @@ const setupUserPassword = async (payload) => {
     const queryParams = [password, userId, userEmail];
     const { rowCount } = await processDBRequest({ query, queryParams });
     return rowCount;
-}
+};
 
 module.exports = {
     findUserByUsername,
-    invalidateRefreshToken,
-    findUserByRefreshToken,
-    updateUserRefreshToken,
+    invalidateCachedRefreshToken,
+    findCachedRefreshToken,
     getMenusByRoleId,
     getRoleNameByRoleId,
     saveUserLastLoginDate,
-    deleteOldRefreshTokenByUserId,
+    destroyOldCachedRefreshTokenByUserId,
     isEmailVerified,
     verifyAccountEmail,
     doesEmailExist,

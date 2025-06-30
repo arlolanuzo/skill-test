@@ -12,20 +12,20 @@ const {
 } = require("../../utils");
 const {
   findUserByUsername,
-  invalidateRefreshToken,
-  findUserByRefreshToken,
+  invalidateCachedRefreshToken,
+  findCachedRefreshToken,
   getMenusByRoleId,
   getRoleNameByRoleId,
   saveUserLastLoginDate,
-  deleteOldRefreshTokenByUserId,
   isEmailVerified,
   verifyAccountEmail,
+  destroyOldCachedRefreshTokenByUserId,
   doesEmailExist,
   setupUserPassword,
 } = require("./auth-repository");
 const { v4: uuidV4 } = require("uuid");
 const { env, db } = require("../../config");
-const { insertRefreshToken, findUserById } = require("../../shared/repository");
+const { cacheRefreshToken, findUserById } = require("../../shared/repository");
 
 const PWD_SETUP_EMAIL_SEND_SUCCESS =
   "Password setup link emailed successfully.";
@@ -76,14 +76,19 @@ const login = async (username, passwordFromUser) => {
       env.JWT_REFRESH_TOKEN_TIME_IN_MS
     );
 
-    await deleteOldRefreshTokenByUserId(userId, client);
-    await insertRefreshToken({ userId, refreshToken }, client);
     await saveUserLastLoginDate(userId, client);
 
     const permissions = await getMenusByRoleId(role_id, client);
     const { hierarchialMenus, apis, uis } = formatMyPermission(permissions);
 
     await client.query("COMMIT");
+
+    try {
+      await destroyOldCachedRefreshTokenByUserId(userId);
+      await cacheRefreshToken({ userId, refreshToken });
+    } catch (error) {
+      throw new ApiError(500, "Unable to login, please try again later");
+    }
 
     const accountBasic = {
       id: userId,
@@ -104,9 +109,9 @@ const login = async (username, passwordFromUser) => {
   }
 };
 
-const logout = async (refreshToken) => {
-  const affectedRow = await invalidateRefreshToken(refreshToken);
-  if (affectedRow <= 0) {
+const logout = async (id, refreshToken) => {
+  const affectedRow = await invalidateCachedRefreshToken(id, refreshToken);
+  if (!affectedRow || affectedRow <= 0) {
     throw new ApiError(500, "Unable to logout");
   }
   return { message: "Logged out successfully" };
@@ -122,12 +127,12 @@ const getNewAccessAndCsrfToken = async (refreshToken) => {
       throw new ApiError(401, "Invalid refresh token");
     }
 
-    const user = await findUserByRefreshToken(refreshToken);
-    if (!user) {
-      throw new ApiError(401, "Refresh token does not exist");
+    const cachedToken = await findCachedRefreshToken(decodedToken.id, refreshToken);
+    if (!cachedToken) {
+        throw new ApiError(401, "Refresh token does not exist");
     }
 
-    const { id: userId, role_id, is_active } = user;
+    const { id: userId, role_id, is_active } = await findUserById(decodedToken.id);
     if (!is_active) {
       throw new ApiError(401, "Your account is disabled");
     }
