@@ -11,7 +11,7 @@ const findAllStudents = async (payload) => {
     const {
         name,
         className,
-        sectionName,
+        section,
         roll,
         search,
         page = 1,
@@ -28,8 +28,8 @@ const findAllStudents = async (payload) => {
             t3.gender,
             t3.dob,
             t3.phone,
-            t3.class_name AS "className",
-            t3.section_name AS "sectionName",
+            t3.class_name AS "class",
+            t3.section_name AS "section",
             t3.roll,
             t3.admission_dt AS "admissionDate",
             t3.father_name AS "fatherName",
@@ -59,9 +59,9 @@ const findAllStudents = async (payload) => {
         query += ` AND t3.class_name = $${queryParams.length + 1}`;
         queryParams.push(className);
     }
-    if (sectionName) {
+    if (section) {
         query += ` AND t3.section_name = $${queryParams.length + 1}`;
-        queryParams.push(sectionName);
+        queryParams.push(section);
     }
     if (roll) {
         query += ` AND t3.roll = $${queryParams.length + 1}`;

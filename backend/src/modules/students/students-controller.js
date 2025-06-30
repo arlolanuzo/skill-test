@@ -6,13 +6,12 @@ const {
     setStudentStatus,
     updateStudent,
 } = require("./students-service");
-const { toInternalFields, toExternalFields } = require("./students-mapping");
 
 const handleGetAllStudents = asyncHandler(async (req, res) => {
     const {
         name,
-        class_name: className,
-        section_name: sectionName,
+        class: className,
+        section,
         roll,
         search,
         page = 1,
@@ -22,23 +21,22 @@ const handleGetAllStudents = asyncHandler(async (req, res) => {
     const students = await getAllStudents({
         name,
         className,
-        sectionName,
+        section,
         roll,
         search,
         page,
         limit,
     });
 
-    res.json(students.map(toExternalFields));
+    res.json(students);
 });
 
 const handleAddStudent = asyncHandler(async (req, res) => {
-    const payload = toInternalFields(req.body);
-    if (!payload.admissionDate) {
-        payload.admissionDate = new Date();
+    if (!req.body.admissionDate) {
+        req.body.admissionDate = new Date();
     }
 
-    const message = await addNewStudent(payload);
+    const message = await addNewStudent(req.body);
     res.json(message);
 });
 
@@ -46,11 +44,10 @@ const handleUpdateStudent = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     const student = await getStudentDetail(id);
-    const updatePayload = toInternalFields(req.body);
 
     const message = await updateStudent({
         ...student,
-        ...updatePayload,
+        ...req.body,
         userId: id,
     });
 
@@ -61,7 +58,7 @@ const handleGetStudentDetail = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     const student = await getStudentDetail(id);
-    res.json(toExternalFields(student));
+    res.json(student);
 });
 
 const handleStudentStatus = asyncHandler(async (req, res) => {
